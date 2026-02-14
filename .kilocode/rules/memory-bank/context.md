@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Project Status**: ✅ Playable 3D FPS Game
+**Project Status**: ✅ Playable 3D FPS Game with Quake-style Enemies
 
-Браузерный 3D шутер от первого лица на Three.js + Next.js. Игра полностью функциональна с управлением, стрельбой, врагами и HUD.
+Браузерный 3D шутер от первого лица на Three.js + Next.js. Игра полностью функциональна с управлением, стрельбой, врагами с 3D моделями и оружием, и HUD.
 
 ## Recently Completed
 
@@ -17,7 +17,10 @@
 - [x] WASD movement + jump with gravity
 - [x] Level with floor, walls, and cover boxes
 - [x] Weapon and shooting mechanics
-- [x] Enemies with AI (chase player)
+- [x] Quake-style 3D enemy models (humanoid with armor, helmet, glowing visor)
+- [x] Enemy plasma rifles with glowing barrels
+- [x] Enemy shooting AI with cooldowns
+- [x] Enemy bullets (orange plasma) that damage player
 - [x] HUD (health, ammo, crosshair, score)
 - [x] Game Over screen
 
@@ -41,26 +44,36 @@
 - **R** - Reload
 
 ### Gameplay
-- 7 enemies that chase the player
-- Enemies respawn when killed
+- 7 Quake-style humanoid enemies with plasma rifles
+- Enemies chase player and shoot from distance
+- Enemies stop at 8 units to maintain shooting distance
+- Orange plasma bullets from enemies (15 damage per hit)
+- Melee damage when enemies get close
 - Health system with damage from enemies
 - Ammo system with reload
 - Score tracking
+
+### Enemy Model Features
+- Body with legs, torso, arms
+- Dark armor with metalness
+- Helmet with glowing orange visor
+- Plasma rifle with glowing barrel
+- Shoulder pads and chest plate
 
 ## Current Focus
 
 Игра готова к тестированию. Возможные улучшения:
 
 1. Добавить звуки (выстрелы, шаги, музыка)
-2. Улучшить графику (текстуры, модели)
+2. Улучшить графику (текстуры)
 3. Добавить разные виды оружия
 4. Создать несколько уровней
 
 ## Pending Improvements
 
 - [ ] Add sound effects
-- [ ] Add textures and better 3D models
-- [ ] Add particle effects
+- [ ] Add textures
+- [ ] Add particle effects (muzzle flash, blood)
 - [ ] Add different weapon types
 - [ ] Add multiple levels
 - [ ] Add boss fights
@@ -71,3 +84,4 @@
 |------|---------|
 | Initial | Template created with base setup |
 | 2026-02-14 | Created browser 3D FPS shooter with Three.js |
+| 2026-02-14 | Added Quake-style 3D enemy models with weapons and shooting AI |
