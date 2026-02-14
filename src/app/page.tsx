@@ -24,6 +24,306 @@ interface Bullet {
   life: number;
 }
 
+// Sound Manager using Web Audio API
+class SoundManager {
+  private audioContext: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private initialized = false;
+
+  // Initialize audio context (must be called after user interaction)
+  init() {
+    if (this.initialized) return;
+    this.audioContext = new AudioContext();
+    this.masterGain = this.audioContext.createGain();
+    this.masterGain.gain.value = 0.3; // Master volume
+    this.masterGain.connect(this.audioContext.destination);
+    this.initialized = true;
+  }
+
+  // Player gunshot - sharp, punchy sound
+  playPlayerGunshot() {
+    if (!this.audioContext || !this.masterGain) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    // Create noise burst for gunshot
+    const bufferSize = ctx.sampleRate * 0.1; // 100ms
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+      // White noise with exponential decay
+      const decay = Math.exp(-i / (bufferSize * 0.1));
+      data[i] = (Math.random() * 2 - 1) * decay;
+    }
+    
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    // Filter for gunshot character
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(3000, now);
+    filter.frequency.exponentialRampToValueAtTime(500, now + 0.1);
+    
+    // Gain envelope
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.8, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    
+    noise.start(now);
+    noise.stop(now + 0.1);
+    
+    // Add a low "thump" for impact
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.05);
+    
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.5, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    
+    osc.connect(oscGain);
+    oscGain.connect(this.masterGain);
+    
+    osc.start(now);
+    osc.stop(now + 0.05);
+  }
+
+  // Enemy gunshot - different tone to distinguish
+  playEnemyGunshot() {
+    if (!this.audioContext || !this.masterGain) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    // Plasma-style sound
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+    
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    // Add some noise
+    const bufferSize = ctx.sampleRate * 0.08;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+    }
+    
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.2;
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    noise.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    
+    osc.start(now);
+    osc.stop(now + 0.15);
+    noise.start(now);
+    noise.stop(now + 0.08);
+  }
+
+  // Player hurt - low frequency buzz
+  playPlayerHurt() {
+    if (!this.audioContext || !this.masterGain) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    // Low frequency buzz
+    const osc = ctx.createOscillator();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(100, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+    
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    
+    osc.start(now);
+    osc.stop(now + 0.2);
+    
+    // Add a higher "pain" tone
+    const osc2 = ctx.createOscillator();
+    osc2.type = "sine";
+    osc2.frequency.value = 400;
+    
+    const gain2 = ctx.createGain();
+    gain2.gain.setValueAtTime(0.2, now);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    osc2.connect(gain2);
+    gain2.connect(this.masterGain);
+    
+    osc2.start(now);
+    osc2.stop(now + 0.15);
+  }
+
+  // Enemy death - descending tone
+  playEnemyDeath() {
+    if (!this.audioContext || !this.masterGain) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    // Descending tone
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.3);
+    
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    
+    // Noise burst for explosion effect
+    const bufferSize = ctx.sampleRate * 0.2;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2));
+    }
+    
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.3;
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    noise.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    
+    osc.start(now);
+    osc.stop(now + 0.3);
+    noise.start(now);
+    noise.stop(now + 0.2);
+  }
+
+  // Reload - mechanical click sound
+  playReload() {
+    if (!this.audioContext || !this.masterGain) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    // Click sound
+    const bufferSize = ctx.sampleRate * 0.05;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+    }
+    
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 2000;
+    
+    const gain = ctx.createGain();
+    gain.gain.value = 0.5;
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    
+    noise.start(now);
+    noise.stop(now + 0.05);
+    
+    // Second click (magazine in)
+    const noise2 = ctx.createBufferSource();
+    noise2.buffer = buffer;
+    
+    const gain2 = ctx.createGain();
+    gain2.gain.value = 0.4;
+    
+    noise2.connect(filter);
+    filter.connect(gain2);
+    gain2.connect(this.masterGain);
+    
+    noise2.start(now + 0.1);
+    noise2.stop(now + 0.15);
+    
+    // Low thump
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = 80;
+    
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.3, now + 0.1);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    osc.connect(oscGain);
+    oscGain.connect(this.masterGain);
+    
+    osc.start(now + 0.1);
+    osc.stop(now + 0.15);
+  }
+
+  // Footstep - short thump
+  playFootstep() {
+    if (!this.audioContext || !this.masterGain) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    // Low thump
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(100, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.05);
+    
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    
+    // Add slight noise for texture
+    const bufferSize = ctx.sampleRate * 0.03;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.5));
+    }
+    
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0.05;
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    noise.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    
+    osc.start(now);
+    osc.stop(now + 0.05);
+    noise.start(now);
+    noise.stop(now + 0.03);
+  }
+}
+
 export default function Game() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -35,6 +335,11 @@ export default function Game() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    // Sound manager
+    const soundManager = new SoundManager();
+    let lastFootstepTime = 0;
+    const FOOTSTEP_INTERVAL = 300; // ms between footsteps
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -353,6 +658,7 @@ export default function Game() {
     let currentHealth = 100;
     let currentScore = 0;
     let isGameOver = false;
+    let isReloading = false;
 
     // Input state
     const keys: { [key: string]: boolean } = {};
@@ -362,6 +668,7 @@ export default function Game() {
     // Pointer lock
     const onClick = () => {
       container?.requestPointerLock();
+      soundManager.init(); // Initialize audio on first click
     };
 
     const onPointerLockChange = () => {
@@ -389,9 +696,13 @@ export default function Game() {
       if (e.button !== 0) return;
       if (currentAmmo <= 0) return;
       if (isGameOver) return;
+      if (isReloading) return;
 
       currentAmmo--;
       setAmmo(currentAmmo);
+
+      // Play gunshot sound
+      soundManager.playPlayerGunshot();
 
       // Create bullet
       const bulletGeometry = new THREE.SphereGeometry(0.05);
@@ -500,6 +811,13 @@ export default function Game() {
         if (!checkCollision(testPosZ)) {
           camera.position.z = newPosition.z;
         }
+
+        // Play footstep sound
+        const now = Date.now();
+        if (now - lastFootstepTime > FOOTSTEP_INTERVAL) {
+          soundManager.playFootstep();
+          lastFootstepTime = now;
+        }
       }
 
       // Jump and gravity
@@ -542,6 +860,8 @@ export default function Game() {
             bullets.splice(i, 1);
 
             if (enemy.health <= 0) {
+              // Play enemy death sound
+              soundManager.playEnemyDeath();
               scene.remove(enemy.mesh);
               enemies.splice(j, 1);
               currentScore += 100;
@@ -610,6 +930,9 @@ export default function Game() {
         if (distanceToPlayer < 30 && currentTime - enemy.lastShot > enemy.shootCooldown) {
           enemy.lastShot = currentTime;
           
+          // Play enemy gunshot sound
+          soundManager.playEnemyGunshot();
+          
           // Create enemy bullet
           const bulletGeometry = new THREE.SphereGeometry(0.1);
           const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff4400 });
@@ -660,6 +983,8 @@ export default function Game() {
         // Check player collision
         const distanceToPlayer = bullet.mesh.position.distanceTo(camera.position);
         if (distanceToPlayer < 0.5) {
+          // Play player hurt sound
+          soundManager.playPlayerHurt();
           currentHealth -= 15;
           setHealth(Math.max(0, Math.round(currentHealth)));
           scene.remove(bullet.mesh);
@@ -680,10 +1005,13 @@ export default function Game() {
       }
 
       // Reload
-      if (keys["KeyR"] && currentAmmo < 30) {
+      if (keys["KeyR"] && currentAmmo < 30 && !isReloading) {
+        isReloading = true;
+        soundManager.playReload();
         setTimeout(() => {
           currentAmmo = 30;
           setAmmo(30);
+          isReloading = false;
         }, 1500);
       }
 

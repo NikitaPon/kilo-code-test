@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Project Status**: ✅ Playable 3D FPS Game with Quake-style Enemies
+**Project Status**: ✅ Playable 3D FPS Game with Quake-style Enemies and Sound Effects
 
-Браузерный 3D шутер от первого лица на Three.js + Next.js. Игра полностью функциональна с управлением, стрельбой, врагами с 3D моделями и оружием, и HUD.
+Браузерный 3D шутер от первого лица на Three.js + Next.js. Игра полностью функциональна с управлением, стрельбой, врагами с 3D моделями и оружием, HUD, и звуковыми эффектами.
 
 ## Recently Completed
 
@@ -23,6 +23,7 @@
 - [x] Enemy bullets (orange plasma) that damage player
 - [x] HUD (health, ammo, crosshair, score)
 - [x] Game Over screen
+- [x] Sound effects system using Web Audio API
 
 ## Current Structure
 
@@ -53,6 +54,14 @@
 - Ammo system with reload
 - Score tracking
 
+### Sound Effects (Web Audio API)
+- **Player Gunshot**: Sharp noise burst with low thump (100ms)
+- **Enemy Gunshot**: Plasma-style sawtooth wave (150ms)
+- **Player Hurt**: Low frequency buzz with pain tone (200ms)
+- **Enemy Death**: Descending tone with explosion noise (300ms)
+- **Reload**: Mechanical clicks with low thump (150ms)
+- **Footsteps**: Low thump with texture noise (50ms, 300ms interval)
+
 ### Enemy Model Features
 - Body with legs, torso, arms
 - Dark armor with metalness
@@ -62,16 +71,15 @@
 
 ## Current Focus
 
-Игра готова к тестированию. Возможные улучшения:
+Игра готова к тестированию со звуками. Возможные улучшения:
 
-1. Добавить звуки (выстрелы, шаги, музыка)
-2. Улучшить графику (текстуры)
-3. Добавить разные виды оружия
-4. Создать несколько уровней
+1. Улучшить графику (текстуры)
+2. Добавить разные виды оружия
+3. Создать несколько уровней
 
 ## Pending Improvements
 
-- [ ] Add sound effects
+- [x] Add sound effects
 - [ ] Add textures
 - [ ] Add particle effects (muzzle flash, blood)
 - [ ] Add different weapon types
@@ -85,3 +93,4 @@
 | Initial | Template created with base setup |
 | 2026-02-14 | Created browser 3D FPS shooter with Three.js |
 | 2026-02-14 | Added Quake-style 3D enemy models with weapons and shooting AI |
+| 2026-02-14 | Added sound effects using Web Audio API (gunshots, hurt, death, reload, footsteps) |
