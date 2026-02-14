@@ -484,7 +484,7 @@ export default function Game() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      <div ref={containerRef} className="w-full h-full" />
+      <div ref={containerRef} className="absolute inset-0 w-full h-full cursor-crosshair" />
 
       {/* HUD */}
       <div className="absolute inset-0 pointer-events-none">
@@ -525,8 +525,11 @@ export default function Game() {
 
         {/* Instructions */}
         {!isLocked && !gameOver && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-auto">
-            <div className="text-center text-white">
+          <div 
+            className="absolute inset-0 flex items-center justify-center bg-black/50 cursor-pointer"
+            onClick={() => containerRef.current?.requestPointerLock()}
+          >
+            <div className="text-center text-white pointer-events-none">
               <h1 className="text-5xl font-bold mb-4">🎯 3D SHOOTER</h1>
               <p className="text-xl mb-8">Click to start</p>
               <div className="text-lg space-y-2">
