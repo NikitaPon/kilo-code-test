@@ -11,9 +11,11 @@ const GRAVITY = 20;
 const JUMP_FORCE = 8;
 
 interface Enemy {
-  mesh: THREE.Mesh;
+  mesh: THREE.Group;
   health: number;
   velocity: THREE.Vector3;
+  lastShot: number;
+  shootCooldown: number;
 }
 
 interface Bullet {
@@ -146,21 +148,175 @@ export default function Game() {
 
     // Enemies
     const enemies: Enemy[] = [];
-    const enemyMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-      roughness: 0.5,
+    const enemyBullets: Bullet[] = [];
+    
+    // Quake-style enemy materials
+    const enemyBodyMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8b0000,
+      roughness: 0.6,
+      metalness: 0.2,
+    });
+    const enemyArmorMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2f2f2f,
+      roughness: 0.4,
+      metalness: 0.7,
+    });
+    const enemySkinMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8b6914,
+      roughness: 0.8,
+    });
+    const enemyWeaponMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1a1a1a,
+      roughness: 0.3,
+      metalness: 0.9,
+    });
+    const enemyGlowMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff4400,
     });
 
     const createEnemy = (x: number, z: number) => {
-      const geometry = new THREE.CapsuleGeometry(0.5, 1, 8, 16);
-      const mesh = new THREE.Mesh(geometry, enemyMaterial);
-      mesh.position.set(x, 1, z);
-      mesh.castShadow = true;
-      scene.add(mesh);
+      const group = new THREE.Group();
+      
+      // Legs
+      const legGeometry = new THREE.CylinderGeometry(0.12, 0.15, 0.8, 8);
+      const leftLeg = new THREE.Mesh(legGeometry, enemyArmorMaterial);
+      leftLeg.position.set(-0.2, 0.4, 0);
+      leftLeg.castShadow = true;
+      group.add(leftLeg);
+      
+      const rightLeg = new THREE.Mesh(legGeometry, enemyArmorMaterial);
+      rightLeg.position.set(0.2, 0.4, 0);
+      rightLeg.castShadow = true;
+      group.add(rightLeg);
+      
+      // Feet
+      const footGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.3);
+      const leftFoot = new THREE.Mesh(footGeometry, enemyArmorMaterial);
+      leftFoot.position.set(-0.2, 0.05, 0.05);
+      leftFoot.castShadow = true;
+      group.add(leftFoot);
+      
+      const rightFoot = new THREE.Mesh(footGeometry, enemyArmorMaterial);
+      rightFoot.position.set(0.2, 0.05, 0.05);
+      rightFoot.castShadow = true;
+      group.add(rightFoot);
+      
+      // Torso
+      const torsoGeometry = new THREE.BoxGeometry(0.6, 0.7, 0.4);
+      const torso = new THREE.Mesh(torsoGeometry, enemyBodyMaterial);
+      torso.position.set(0, 1.15, 0);
+      torso.castShadow = true;
+      group.add(torso);
+      
+      // Chest armor plate
+      const chestPlateGeometry = new THREE.BoxGeometry(0.5, 0.4, 0.1);
+      const chestPlate = new THREE.Mesh(chestPlateGeometry, enemyArmorMaterial);
+      chestPlate.position.set(0, 1.2, 0.2);
+      chestPlate.castShadow = true;
+      group.add(chestPlate);
+      
+      // Shoulder pads
+      const shoulderGeometry = new THREE.SphereGeometry(0.18, 8, 8);
+      const leftShoulder = new THREE.Mesh(shoulderGeometry, enemyArmorMaterial);
+      leftShoulder.position.set(-0.4, 1.35, 0);
+      leftShoulder.castShadow = true;
+      group.add(leftShoulder);
+      
+      const rightShoulder = new THREE.Mesh(shoulderGeometry, enemyArmorMaterial);
+      rightShoulder.position.set(0.4, 1.35, 0);
+      rightShoulder.castShadow = true;
+      group.add(rightShoulder);
+      
+      // Arms
+      const armGeometry = new THREE.CylinderGeometry(0.08, 0.1, 0.5, 8);
+      const leftArm = new THREE.Mesh(armGeometry, enemyBodyMaterial);
+      leftArm.position.set(-0.4, 1.0, 0);
+      leftArm.castShadow = true;
+      group.add(leftArm);
+      
+      const rightArm = new THREE.Mesh(armGeometry, enemyBodyMaterial);
+      rightArm.position.set(0.4, 1.0, 0);
+      rightArm.rotation.x = -Math.PI / 4;
+      rightArm.position.z = 0.15;
+      rightArm.castShadow = true;
+      group.add(rightArm);
+      
+      // Hands
+      const handGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+      const leftHand = new THREE.Mesh(handGeometry, enemySkinMaterial);
+      leftHand.position.set(-0.4, 0.75, 0);
+      group.add(leftHand);
+      
+      const rightHand = new THREE.Mesh(handGeometry, enemySkinMaterial);
+      rightHand.position.set(0.45, 0.85, 0.25);
+      group.add(rightHand);
+      
+      // Head
+      const headGeometry = new THREE.BoxGeometry(0.35, 0.4, 0.35);
+      const head = new THREE.Mesh(headGeometry, enemySkinMaterial);
+      head.position.set(0, 1.65, 0);
+      head.castShadow = true;
+      group.add(head);
+      
+      // Helmet
+      const helmetGeometry = new THREE.SphereGeometry(0.25, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+      const helmet = new THREE.Mesh(helmetGeometry, enemyArmorMaterial);
+      helmet.position.set(0, 1.7, 0);
+      helmet.castShadow = true;
+      group.add(helmet);
+      
+      // Visor (glowing eyes)
+      const visorGeometry = new THREE.BoxGeometry(0.25, 0.08, 0.1);
+      const visor = new THREE.Mesh(visorGeometry, enemyGlowMaterial);
+      visor.position.set(0, 1.65, 0.18);
+      group.add(visor);
+      
+      // Weapon (plasma rifle)
+      const weaponGroup = new THREE.Group();
+      
+      // Main body of the gun
+      const gunBodyGeometry = new THREE.BoxGeometry(0.12, 0.15, 0.6);
+      const gunBody = new THREE.Mesh(gunBodyGeometry, enemyWeaponMaterial);
+      gunBody.castShadow = true;
+      weaponGroup.add(gunBody);
+      
+      // Barrel
+      const barrelGeometry = new THREE.CylinderGeometry(0.04, 0.05, 0.3, 8);
+      const barrel = new THREE.Mesh(barrelGeometry, enemyWeaponMaterial);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.set(0, 0, -0.45);
+      barrel.castShadow = true;
+      weaponGroup.add(barrel);
+      
+      // Barrel glow
+      const barrelGlowGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.05, 8);
+      const barrelGlow = new THREE.Mesh(barrelGlowGeometry, enemyGlowMaterial);
+      barrelGlow.rotation.x = Math.PI / 2;
+      barrelGlow.position.set(0, 0, -0.62);
+      weaponGroup.add(barrelGlow);
+      
+      // Stock
+      const stockGeometry = new THREE.BoxGeometry(0.08, 0.12, 0.2);
+      const stock = new THREE.Mesh(stockGeometry, enemyWeaponMaterial);
+      stock.position.set(0, -0.02, 0.35);
+      stock.castShadow = true;
+      weaponGroup.add(stock);
+      
+      // Position weapon in right hand
+      weaponGroup.position.set(0.45, 0.8, 0.35);
+      weaponGroup.rotation.y = Math.PI;
+      group.add(weaponGroup);
+      
+      // Position the whole enemy
+      group.position.set(x, 0, z);
+      scene.add(group);
+      
       enemies.push({
-        mesh,
+        mesh: group,
         health: 100,
         velocity: new THREE.Vector3(),
+        lastShot: 0,
+        shootCooldown: 1.5 + Math.random() * 1, // 1.5-2.5 seconds between shots
       });
     };
 
@@ -377,8 +533,10 @@ export default function Game() {
         // Check enemy collision
         for (let j = enemies.length - 1; j >= 0; j--) {
           const enemy = enemies[j];
-          const distance = bullet.mesh.position.distanceTo(enemy.mesh.position);
-          if (distance < 1) {
+          const enemyPos = enemy.mesh.position.clone();
+          enemyPos.y += 1; // Center of enemy body
+          const distance = bullet.mesh.position.distanceTo(enemyPos);
+          if (distance < 1.2) {
             enemy.health -= 34;
             scene.remove(bullet.mesh);
             bullets.splice(i, 1);
@@ -391,10 +549,10 @@ export default function Game() {
 
               // Spawn new enemy
               const angle = Math.random() * Math.PI * 2;
-              const distance = 30 + Math.random() * 15;
+              const spawnDist = 30 + Math.random() * 15;
               createEnemy(
-                Math.cos(angle) * distance,
-                Math.sin(angle) * distance
+                Math.cos(angle) * spawnDist,
+                Math.sin(angle) * spawnDist
               );
             }
             break;
@@ -409,6 +567,8 @@ export default function Game() {
       }
 
       // Update enemies
+      const currentTime = clock.getElapsedTime();
+      
       for (const enemy of enemies) {
         // Move towards player
         const direction = new THREE.Vector3();
@@ -416,22 +576,27 @@ export default function Game() {
         direction.y = 0;
         direction.normalize();
 
-        const enemySpeed = 2;
-        const newEnemyPos = enemy.mesh.position.clone();
-        newEnemyPos.add(direction.multiplyScalar(enemySpeed * delta));
+        const distanceToPlayer = enemy.mesh.position.distanceTo(camera.position);
+        
+        // Move if not too close
+        if (distanceToPlayer > 8) {
+          const enemySpeed = 2.5;
+          const newEnemyPos = enemy.mesh.position.clone();
+          newEnemyPos.add(direction.clone().multiplyScalar(enemySpeed * delta));
 
-        // Simple collision check for enemies
-        let canMove = true;
-        for (const obstacle of obstacles) {
-          const box = new THREE.Box3().setFromObject(obstacle);
-          if (box.containsPoint(newEnemyPos)) {
-            canMove = false;
-            break;
+          // Simple collision check for enemies
+          let canMove = true;
+          for (const obstacle of obstacles) {
+            const box = new THREE.Box3().setFromObject(obstacle);
+            if (box.containsPoint(newEnemyPos)) {
+              canMove = false;
+              break;
+            }
           }
-        }
 
-        if (canMove) {
-          enemy.mesh.position.copy(newEnemyPos);
+          if (canMove) {
+            enemy.mesh.position.copy(newEnemyPos);
+          }
         }
 
         // Look at player
@@ -441,8 +606,40 @@ export default function Game() {
           camera.position.z
         );
 
-        // Attack player
-        const distanceToPlayer = enemy.mesh.position.distanceTo(camera.position);
+        // Shoot at player
+        if (distanceToPlayer < 30 && currentTime - enemy.lastShot > enemy.shootCooldown) {
+          enemy.lastShot = currentTime;
+          
+          // Create enemy bullet
+          const bulletGeometry = new THREE.SphereGeometry(0.1);
+          const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff4400 });
+          const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+          
+          // Shoot from enemy weapon position
+          const weaponPos = new THREE.Vector3(0.45, 0.8, -0.3);
+          weaponPos.applyQuaternion(enemy.mesh.quaternion);
+          bullet.position.copy(enemy.mesh.position).add(weaponPos);
+          
+          // Direction towards player with slight inaccuracy
+          const shootDir = direction.clone();
+          shootDir.y = (camera.position.y - bullet.position.y) / distanceToPlayer;
+          shootDir.normalize();
+          
+          // Add slight random spread
+          shootDir.x += (Math.random() - 0.5) * 0.1;
+          shootDir.y += (Math.random() - 0.5) * 0.1;
+          shootDir.z += (Math.random() - 0.5) * 0.1;
+          shootDir.normalize();
+          
+          scene.add(bullet);
+          enemyBullets.push({
+            mesh: bullet,
+            velocity: shootDir.multiplyScalar(25),
+            life: 3,
+          });
+        }
+
+        // Melee attack if very close
         if (distanceToPlayer < 2) {
           currentHealth -= 10 * delta;
           setHealth(Math.max(0, Math.round(currentHealth)));
@@ -451,6 +648,34 @@ export default function Game() {
             isGameOver = true;
             setGameOver(true);
           }
+        }
+      }
+      
+      // Update enemy bullets
+      for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        const bullet = enemyBullets[i];
+        bullet.mesh.position.add(bullet.velocity.clone().multiplyScalar(delta));
+        bullet.life -= delta;
+        
+        // Check player collision
+        const distanceToPlayer = bullet.mesh.position.distanceTo(camera.position);
+        if (distanceToPlayer < 0.5) {
+          currentHealth -= 15;
+          setHealth(Math.max(0, Math.round(currentHealth)));
+          scene.remove(bullet.mesh);
+          enemyBullets.splice(i, 1);
+          
+          if (currentHealth <= 0) {
+            isGameOver = true;
+            setGameOver(true);
+          }
+          continue;
+        }
+        
+        // Remove old bullets
+        if (bullet.life <= 0) {
+          scene.remove(bullet.mesh);
+          enemyBullets.splice(i, 1);
         }
       }
 
